@@ -5,12 +5,15 @@ import javax.swing.filechooser.*;
 
 public class Image2Image extends JFrame implements ActionListener {
 	
-	// Jlabel to show the files user selects 
-    static JLabel label; 
+	// Label to show the files user selects 
+    static JLabel label;
     static JLabel label2;
+    static JList file_list;
     static JTextField text_field;
-    static JComboBox file_extension_list;
-    
+    static JComboBox<String> file_extension_list;
+    static File[] selected_files;
+    static JPanel panel;
+
     // a default constructor 
     Image2Image(){ 
     } 
@@ -48,12 +51,12 @@ public class Image2Image extends JFrame implements ActionListener {
 		//Make a drop-down menu using a ComboBox.
 		//List output file extensions.
 		String[] file_extensions = {"png", "jpeg", "bmp", "gif", "tiff"};
-		file_extension_list = new JComboBox(file_extensions);		
+		file_extension_list = new JComboBox<String>(file_extensions);
 		file_extension_list.setSelectedIndex(0);
 		file_extension_list.addActionListener(m2m);
 		
 		//make a panel to add the buttons and labels
-		JPanel panel = new JPanel();
+		panel = new JPanel();
 		
 		//add the button to the frame.
 		panel.add(buttonOpen);
@@ -66,6 +69,7 @@ public class Image2Image extends JFrame implements ActionListener {
 		//Set the label to its initial value
 		label = new JLabel("no file selected");
 		label2 = new JLabel();
+		file_list = new JList();
 		
 		//add panel to the frame
 		panel.add(label);
@@ -84,60 +88,91 @@ public class Image2Image extends JFrame implements ActionListener {
 		String com = e.getActionCommand();
 		
 		if(com.equals("open")) {
-			//create an object of JFileChooser class
-			JFileChooser j = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
-			
-			//set the selection mode to directories and files.
-			j.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
-			
-			//Set filter to JFileChooser object so the dialog only shows jpg.
-			j.addChoosableFileFilter(new FileNameExtensionFilter("JPEG", "jpg", "jpeg"));
-			j.addChoosableFileFilter(new FileNameExtensionFilter("PNG", "png"));
-			
-			
-			//invoke the showsOpenDialog function to show the save dialog
-			int r = j.showOpenDialog(null);
-			
-			if(r == JFileChooser.APPROVE_OPTION){
-				//set the label to the path of the selected directory
-				label.setText(j.getSelectedFile().getAbsolutePath());
-			}else {
-				//if the user cancelled the operation
-				label.setText("The user cancelled the operation.");
-			}
+			handleOpenCommand();
 		}else if(com.equals("convert")) {
+			handleConvertCommand();
+		}
+	}
+	
+	public void handleOpenCommand() {
+		//create an object of JFileChooser class
+		JFileChooser file_chooser = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+		
+		//set the selection mode to directories and files.
+		file_chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+		
+		//Enable file_chooser to select multiple files.
+		file_chooser.setMultiSelectionEnabled(true);
+		
+		//Set filter to JFileChooser object so the dialog only shows jpg.
+		file_chooser.addChoosableFileFilter(new FileNameExtensionFilter("JPEG", "jpg", "jpeg"));
+		file_chooser.addChoosableFileFilter(new FileNameExtensionFilter("PNG", "png"));
+		
+		//invoke the showsOpenDialog function to show the save dialog
+		int r = file_chooser.showOpenDialog(null);
+		
+		if(r == JFileChooser.APPROVE_OPTION){
 			
-			ImageConverter image_converter = new ImageConverter();
+			//Set the names of the selected files to a list shown in GUI.
+			selected_files = file_chooser.getSelectedFiles(); //selected_files is File[] array.
+			file_list = new JList<>(selected_files); //JList containing a list of files.
+			//file_list.setCellRenderer(new FileRenderer(true));
+			file_list.setVisibleRowCount(10);
 			
-			if(label.getText() != "no file selected" && label.getText() != "The user cancelled the operation.") {
-				String inputImagePath = label.getText();
-				
-				int dot = 0;
-				for(int i = inputImagePath.length()-1; i > 0; i--) {
-					if(inputImagePath.charAt(i) == '.') {
-						dot = i;
-					}
-				}
-				StringBuilder sb = new StringBuilder(inputImagePath.substring(0,dot));
-				String file_ext = (String) file_extension_list.getSelectedItem();
-				sb.append(".");
-				sb.append(file_ext);
-				String outputImagePath = sb.toString();
-				
-				try {
-					boolean result = image_converter.convertFormat(inputImagePath, outputImagePath, file_ext);
-					if(result) {
-						label2.setText("Image Converted Successfully!");
-					}else {
-						label2.setText("Could not convert the image.");
-					}
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					System.out.println("Error during converting image.");
-					e1.printStackTrace();
+			// Create the model for the JList
+		    DefaultListModel model = new DefaultListModel();
+
+		    // Add all the elements of the array "selected_files" in the model
+		    for (int i=0 ; i<selected_files.length ; i++){
+		        model.addElement(selected_files[i].getName());
+		    }
+			
+		    // Add the JList to the JScrollPane
+		    file_list.setModel(model);
+			
+		    panel.add(new JScrollPane(file_list));
+		    panel.revalidate();
+		    panel.repaint();
+		    
+			//set the label to the path of the selected directory
+			label.setText("The user has selected the files.");
+		}else {
+			//if the user cancelled the operation
+			label.setText("The user cancelled the operation.");
+		}
+	}
+	
+	public void handleConvertCommand() {
+		ImageConverter image_converter = new ImageConverter();
+		
+		if(label.getText() != "no file selected" && label.getText() != "The user cancelled the operation.") {
+			
+			String inputImagePath = label.getText();
+			
+			int dot = 0;
+			for(int i = inputImagePath.length()-1; i > 0; i--) {
+				if(inputImagePath.charAt(i) == '.') {
+					dot = i;
 				}
 			}
+			StringBuilder sb = new StringBuilder(inputImagePath.substring(0,dot));
+			String file_ext = (String) file_extension_list.getSelectedItem();
+			sb.append(".");
+			sb.append(file_ext);
+			String outputImagePath = sb.toString();
 			
+			try {
+				boolean result = image_converter.convertFormat(inputImagePath, outputImagePath, file_ext);
+				if(result) {
+					label2.setText("Image Converted Successfully!");
+				}else {
+					label2.setText("Could not convert the image.");
+				}
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				System.out.println("Error during converting image.");
+				e1.printStackTrace();
+			}
 		}
 	}
 	
