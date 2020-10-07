@@ -13,6 +13,7 @@ public class Image2Image extends JFrame implements ActionListener {
     static JComboBox<String> file_extension_list;
     static File[] selected_files;
     static JPanel panel;
+    static JScrollPane selected_files_list_pane;
 
     // a default constructor 
     Image2Image(){ 
@@ -38,15 +39,19 @@ public class Image2Image extends JFrame implements ActionListener {
 		//Button to convert the jpeg file to the png file.
 		JButton buttonConvert = new JButton("convert");
 		
+		//Button to set output directory.
+		JButton buttonSetDirectory = new JButton("set output directory");
+		
 		//make an object of the class JpegToPng
 		Image2Image m2m = new Image2Image();
 		
 		//Add an action listener to each button to capture user response.  
 		buttonOpen.addActionListener(m2m);
 		buttonConvert.addActionListener(m2m);
+		buttonSetDirectory.addActionListener(m2m);
 		
 		//Make a text field to specify the file extension of the converted image.
-		text_field = new JTextField("Type in file extension e.g png, jpeg",26);
+		text_field = new JTextField("This is your output directory.",26);
 		
 		//Make a drop-down menu using a ComboBox.
 		//List output file extensions.
@@ -65,6 +70,7 @@ public class Image2Image extends JFrame implements ActionListener {
 		
 		//Add the text field to the panel.
 		panel.add(text_field);
+		panel.add(buttonSetDirectory);
 		
 		//Set the label to its initial value
 		label = new JLabel("no file selected");
@@ -91,6 +97,8 @@ public class Image2Image extends JFrame implements ActionListener {
 			handleOpenCommand();
 		}else if(com.equals("convert")) {
 			handleConvertCommand();
+		}else if(com.equals("set output directory")) {
+			handleSetDirectoryCommand();
 		}
 	}
 	
@@ -116,6 +124,7 @@ public class Image2Image extends JFrame implements ActionListener {
 			//Set the names of the selected files to a list shown in GUI.
 			selected_files = file_chooser.getSelectedFiles(); //selected_files is File[] array.
 			file_list = new JList<>(selected_files); //JList containing a list of files.
+			
 			//file_list.setCellRenderer(new FileRenderer(true));
 			file_list.setVisibleRowCount(10);
 			
@@ -130,7 +139,9 @@ public class Image2Image extends JFrame implements ActionListener {
 		    // Add the JList to the JScrollPane
 		    file_list.setModel(model);
 			
-		    panel.add(new JScrollPane(file_list));
+		    selected_files_list_pane = new JScrollPane(file_list);
+		    		
+		    panel.add(selected_files_list_pane);
 		    panel.revalidate();
 		    panel.repaint();
 		    
@@ -139,41 +150,84 @@ public class Image2Image extends JFrame implements ActionListener {
 		}else {
 			//if the user cancelled the operation
 			label.setText("The user cancelled the operation.");
+			selected_files = null;
+			file_list = null;
+			panel.remove(selected_files_list_pane);
+			selected_files_list_pane = null;
+			panel.revalidate();
+			panel.repaint();
 		}
 	}
 	
 	public void handleConvertCommand() {
 		ImageConverter image_converter = new ImageConverter();
 		
-		if(label.getText() != "no file selected" && label.getText() != "The user cancelled the operation.") {
+		if(label.getText() == "The user has selected the files.") {
 			
-			String inputImagePath = label.getText();
-			
-			int dot = 0;
-			for(int i = inputImagePath.length()-1; i > 0; i--) {
-				if(inputImagePath.charAt(i) == '.') {
-					dot = i;
+			for(File file : selected_files) {
+				//Make the output file's absolute path including its name and extension.
+				StringBuilder sb = new StringBuilder();
+				sb.append(text_field.getText());
+				sb.append("\\");
+				String file_name = getFileNameWithoutExtension(file.getName());
+				sb.append(file_name);
+				sb.append(".");
+				String file_ext = (String) file_extension_list.getSelectedItem();
+				sb.append(file_ext);
+				String outputImagePath = sb.toString();
+				
+				try {
+					boolean result = image_converter.convertFormat(file.getAbsolutePath(), outputImagePath, file_ext);
+					if(result) {
+						label2.setText("Image Converted Successfully!");
+					}else {
+						label2.setText("Could not convert the image.");
+					}
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					System.out.println("Error during converting image.");
+					e1.printStackTrace();
 				}
-			}
-			StringBuilder sb = new StringBuilder(inputImagePath.substring(0,dot));
-			String file_ext = (String) file_extension_list.getSelectedItem();
-			sb.append(".");
-			sb.append(file_ext);
-			String outputImagePath = sb.toString();
-			
-			try {
-				boolean result = image_converter.convertFormat(inputImagePath, outputImagePath, file_ext);
-				if(result) {
-					label2.setText("Image Converted Successfully!");
-				}else {
-					label2.setText("Could not convert the image.");
-				}
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				System.out.println("Error during converting image.");
-				e1.printStackTrace();
 			}
 		}
 	}
+	
+	public String getFileNameWithoutExtension(String file_name) {
+		
+		//Make output file directory. 
+		int dot = 0;
+		for(int i = file_name.length()-1; i > 0; i--) {
+			if(file_name.charAt(i) == '.') {
+				dot = i;
+			}
+		}
+		
+		return file_name.substring(0,dot);
+	}
+	
+	
+	public void handleSetDirectoryCommand() {
+		//create an object of JFileChooser class
+		JFileChooser directory_chooser = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
+		
+		//set the selection mode to directories and files.
+		directory_chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		
+		//Enable file_chooser to select multiple files.
+		directory_chooser.setMultiSelectionEnabled(true);
+		
+		//invoke the showsOpenDialog function to show the save dialog
+		int chosen_option = directory_chooser.showOpenDialog(null);
+		
+		if(chosen_option == JFileChooser.APPROVE_OPTION) {
+			String output_directory = directory_chooser.getSelectedFile().getAbsolutePath();
+			text_field.setText(output_directory);
+		}else {
+			text_field.setText("The user cancelled the operation.");
+		}
+		
+	}
+	
+	
 	
 }
