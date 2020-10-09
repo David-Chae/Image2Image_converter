@@ -14,7 +14,8 @@ public class Image2Image extends JFrame implements ActionListener {
     static File[] selected_files;
     static JPanel panel;
     static JScrollPane selected_files_list_pane;
-
+    static JScrollPane converted_files_list_pane;
+    
     // a default constructor 
     Image2Image(){ 
     } 
@@ -25,7 +26,7 @@ public class Image2Image extends JFrame implements ActionListener {
 		JFrame frame = new JFrame("file chooser to select directories"); 
 		
 		// set the size of the frame 
-		frame.setSize(400, 400);
+		frame.setSize(800, 400);
 		
 		// set the frame's visibility
 		frame.setVisible(true);
@@ -112,9 +113,13 @@ public class Image2Image extends JFrame implements ActionListener {
 		//Enable file_chooser to select multiple files.
 		file_chooser.setMultiSelectionEnabled(true);
 		
-		//Set filter to JFileChooser object so the dialog only shows jpg.
+		//Set filter to JFileChooser object so the dialog only shows one type of image.
+		//Add filters for "jpeg", ""png, "bmp", "gif", "tiff"
 		file_chooser.addChoosableFileFilter(new FileNameExtensionFilter("JPEG", "jpg", "jpeg"));
 		file_chooser.addChoosableFileFilter(new FileNameExtensionFilter("PNG", "png"));
+		file_chooser.addChoosableFileFilter(new FileNameExtensionFilter("BMP", "bmp"));
+		file_chooser.addChoosableFileFilter(new FileNameExtensionFilter("GIF", "gif"));
+		file_chooser.addChoosableFileFilter(new FileNameExtensionFilter("TIFF", "tiff"));
 		
 		//invoke the showsOpenDialog function to show the save dialog
 		int r = file_chooser.showOpenDialog(null);
@@ -150,10 +155,17 @@ public class Image2Image extends JFrame implements ActionListener {
 		}else {
 			//if the user cancelled the operation
 			label.setText("The user cancelled the operation.");
-			selected_files = null;
-			file_list = null;
-			panel.remove(selected_files_list_pane);
-			selected_files_list_pane = null;
+			
+			if(selected_files_list_pane != null) {
+				try {
+					panel.remove(selected_files_list_pane);
+				}catch(NullPointerException e){
+					e.printStackTrace();
+				}
+			}
+			selected_files = new File[0];
+			file_list = new JList<File>();
+			selected_files_list_pane = new JScrollPane();
 			panel.revalidate();
 			panel.repaint();
 		}
@@ -161,6 +173,8 @@ public class Image2Image extends JFrame implements ActionListener {
 	
 	public void handleConvertCommand() {
 		ImageConverter image_converter = new ImageConverter();
+		
+		
 		
 		if(label.getText() == "The user has selected the files.") {
 			
@@ -205,7 +219,6 @@ public class Image2Image extends JFrame implements ActionListener {
 		return file_name.substring(0,dot);
 	}
 	
-	
 	public void handleSetDirectoryCommand() {
 		//create an object of JFileChooser class
 		JFileChooser directory_chooser = new JFileChooser(FileSystemView.getFileSystemView().getHomeDirectory());
@@ -227,7 +240,5 @@ public class Image2Image extends JFrame implements ActionListener {
 		}
 		
 	}
-	
-	
 	
 }
