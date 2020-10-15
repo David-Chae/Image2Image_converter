@@ -245,7 +245,7 @@ public class Main_Window {
 				String outputImagePath = makeOutputFilename(file, file_ext);
 				
 				try {
-					boolean result = convertFormat(file.getAbsolutePath(), outputImagePath, file_ext);
+					boolean result = convertFormat(file, outputImagePath, file_ext);
 					if(result) {
 						converted_model.addElement(getFileNameWithoutExtension(file.getName())+ "." + file_ext + " (success)");
 					}else {
@@ -292,9 +292,9 @@ public class Main_Window {
 	
 	
 	
-	public boolean convertFormat(String inputImagePath, String outputImagePath, String formatName) throws IOException {
+	public boolean convertFormat(File inputImageFile, String outputImagePath, String formatName) throws IOException {
         
-		FileInputStream inputStream = new FileInputStream(inputImagePath);
+		FileInputStream inputStream = new FileInputStream(inputImageFile);
         FileOutputStream outputStream = new FileOutputStream(outputImagePath);
          
         // reads input image from file
