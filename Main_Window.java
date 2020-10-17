@@ -35,6 +35,7 @@ import java.awt.RenderingHints;
 
 public class Main_Window {
 
+
 	private JFrame frame;
 	private JTextField output_directory_text_field;
 	private JLabel label;
