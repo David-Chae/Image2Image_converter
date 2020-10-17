@@ -1,3 +1,4 @@
+
 import java.awt.Color;
 import java.awt.EventQueue;
 import javax.swing.JFrame;
@@ -28,6 +29,9 @@ import javax.swing.SwingConstants;
 import javax.swing.JScrollPane;
 import java.awt.List;
 import javax.swing.JLabel;
+import java.awt.Graphics2D;
+import java.awt.AlphaComposite;
+import java.awt.RenderingHints;
 
 public class Main_Window {
 
@@ -40,6 +44,8 @@ public class Main_Window {
 	private JPanel mid_panel;
 	private JComboBox file_extension_list;
 	private JScrollPane selected_files_list_pane;
+	private JScrollPane converted_files_list_pane;
+	private JComboBox resolutions_list;
 	
 	/**
 	 * Launch the application.
@@ -99,6 +105,15 @@ public class Main_Window {
 					.addComponent(mid_panel, GroupLayout.DEFAULT_SIZE, 199, Short.MAX_VALUE)
 					.addContainerGap())
 		);
+		mid_panel.setLayout(null);
+		
+		selected_files_list_pane = new JScrollPane();
+		selected_files_list_pane.setBounds(12, 10, 249, 157);
+		mid_panel.add(selected_files_list_pane);
+		
+		converted_files_list_pane = new JScrollPane();
+		converted_files_list_pane.setBounds(273, 10, 269, 157);
+		mid_panel.add(converted_files_list_pane);
 		top_panel.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
 		
 		JButton buttonOpen = new JButton("Open");
@@ -135,6 +150,18 @@ public class Main_Window {
 		top_panel.add(buttonSetDirectory);
 		
 		top_panel.add(label);
+		
+		JButton buttonResize = new JButton("Resize");
+		buttonResize.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				handleResizeCommand();
+			}
+		});
+		top_panel.add(buttonResize);
+		
+		resolutions_list = new JComboBox();
+		resolutions_list.setModel(new DefaultComboBoxModel(new String[] {"640x480","1392x1024","1600x1200","2080x1542","2580x1944","2816x2112","3264x2448","4080x3072","6464x4864"}));
+		top_panel.add(resolutions_list);
 		frame.getContentPane().setLayout(groupLayout);
 	}
 	
@@ -198,7 +225,7 @@ public class Main_Window {
 			
 		    // Make the scroll pane containing the JList.
 		    selected_files_list_pane = new JScrollPane(file_list);
-		    
+		    selected_files_list_pane.setBounds(12, 10, 249, 157);
 		    // Add the scroll pane to the mid panel.
 		    mid_panel.add(selected_files_list_pane);
 		    mid_panel.revalidate();
@@ -222,6 +249,7 @@ public class Main_Window {
 			selected_files = new File[0];
 			file_list = new JList<File>();
 			selected_files_list_pane = new JScrollPane();
+			selected_files_list_pane.setBounds(12, 10, 249, 157);
 			mid_panel.revalidate();
 			mid_panel.repaint();
 		}
@@ -231,6 +259,15 @@ public class Main_Window {
 	public void handleConvertCommand() {
 		
 		if(file_list.getModel().getSize() != 0) {
+			
+			if(converted_files_list_pane != null) {
+				try {//remove() can cause NullPointerException.
+					mid_panel.remove(converted_files_list_pane);
+				}catch(NullPointerException e){
+					e.printStackTrace();
+				}
+			}
+			
 			//JList containing a list of files to be converted.
 			JList<String> converted_file_list = new JList<>();
 			
@@ -259,14 +296,12 @@ public class Main_Window {
 		    // Set the model to the JList
 		    converted_file_list.setModel(converted_model);
 		    
-		    //Remove the selected files list from the scroll pane.
-		    mid_panel.remove(selected_files_list_pane);
-		    
 		    //Assign the converted list to the selected files list scroll pane.
-		    selected_files_list_pane = new JScrollPane(converted_file_list);
-		    
+		    converted_files_list_pane = new JScrollPane(converted_file_list);
+		    converted_files_list_pane.setBounds(273, 10, 269, 157);
 		    // Add the scroll pane to the mid panel.
-		    mid_panel.add(selected_files_list_pane);
+		    mid_panel.add(converted_files_list_pane);
+		    
 		    frame.getContentPane().add(mid_panel);
 		    mid_panel.revalidate();
 		    mid_panel.repaint();
@@ -359,5 +394,120 @@ public class Main_Window {
 		
 	}
 	
+	public String makeOutputFilename(File file, String file_ext, String resolution) {
+		StringBuilder sb = new StringBuilder();
+		//Get output directory.
+		sb.append(output_directory_text_field.getText());
+		//Add slashes
+		sb.append("\\");
+		//Put output filename.
+		String file_name = getFileNameWithoutExtension(file.getName());
+		sb.append(file_name);
+		sb.append("_");
+		sb.append(resolution);
+		sb.append(".");
+		//Put output file extension.
+		sb.append(file_ext);
+		//Return the absolute path of the output file. 
+		return sb.toString();
+	}
 	
+	public void handleResizeCommand() {
+		/*
+		 * Just resize the image without converting to different format.
+		 * 
+		 */
+		if(file_list.getModel().getSize() != 0) {
+			//JList containing a list of files to be resized.
+			JList<String> resized_file_list = new JList<>();
+			
+			//Make resized file list visible.
+			resized_file_list.setVisibleRowCount(10);
+			
+			// Create the model for the resized_file_list
+		    DefaultListModel<String> resized_model = new DefaultListModel<>();
+		    
+		    //Get the target resolution.
+		    String resolution = (String) resolutions_list.getSelectedItem();
+		    String[] width_height = resolution.split("x");
+			int width = Integer.parseInt(width_height[0]);
+			int height = Integer.parseInt(width_height[1]);
+			
+		    for(File file : selected_files) {
+				
+				String file_ext = (String) file_extension_list.getSelectedItem();
+				String outputImagePath = makeOutputFilename(file, file_ext, resolution);
+				
+				
+				boolean result = resizeImageWithHint(file, outputImagePath, file_ext, width, height);
+				if(result) {
+					resized_model.addElement(getFileNameWithoutExtension(file.getName())+ "_" + resolution + "." + file_ext + " (success)");
+				}else {
+					resized_model.addElement(getFileNameWithoutExtension(file.getName())+ "_" + resolution + "." + file_ext + " (failed)");
+				}
+				
+			}
+		    // Set the model to the JList
+		    resized_file_list.setModel(resized_model);
+		    
+		    if(converted_files_list_pane != null) {
+				try {//remove() can cause NullPointerException.
+					mid_panel.remove(converted_files_list_pane);
+				}catch(NullPointerException e){
+					e.printStackTrace();
+				}
+			}
+		    
+		    //Assign the converted list to the selected files list scroll pane.
+		    converted_files_list_pane = new JScrollPane(resized_file_list);
+		    converted_files_list_pane.setBounds(273, 10, 269, 157);
+		    // Add the scroll pane to the mid panel.
+		    mid_panel.add(converted_files_list_pane);
+		    frame.getContentPane().add(mid_panel);
+		    mid_panel.revalidate();
+		    mid_panel.repaint();
+		}
+	}
+
+	private static boolean resizeImageWithHint(File originalFile, String outputImagePath, String formatName, int img_width, int img_height){
+		
+		boolean result = false;
+		
+		try {
+			// reads input image from file
+			FileInputStream inputStream = new FileInputStream(originalFile);
+	        BufferedImage originalImage = ImageIO.read(inputStream);
+			
+	        //Get image type from originalImage object made above from file object.
+			int type = originalImage.getType() == 0? BufferedImage.TYPE_INT_ARGB : originalImage.getType();
+			
+			//Make resized BufferedImage object from above originalImage object and arguments.
+			BufferedImage resizedImage = new BufferedImage(img_width, img_height, type);
+			Graphics2D g = resizedImage.createGraphics();
+			g.drawImage(originalImage, 0, 0, img_width, img_height, null);
+			g.dispose();
+			g.setComposite(AlphaComposite.Src);
+			
+			//Improve the quality of the image.
+			g.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+			RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+			g.setRenderingHint(RenderingHints.KEY_RENDERING,
+			RenderingHints.VALUE_RENDER_QUALITY);
+			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+			RenderingHints.VALUE_ANTIALIAS_ON);
+			
+			//Write the BufferedImage object into an output file.
+			FileOutputStream outputStream = new FileOutputStream(outputImagePath);
+	        result = ImageIO.write(resizedImage, formatName, outputStream);
+		
+			// needs to close the streams
+	        outputStream.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+        return result;	
+		
+	}
 }
