@@ -1,4 +1,5 @@
 
+
 import java.awt.Color;
 import java.awt.EventQueue;
 import javax.swing.JFrame;
@@ -30,6 +31,7 @@ import javax.swing.JScrollPane;
 import java.awt.List;
 import javax.swing.JLabel;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.AlphaComposite;
 import java.awt.RenderingHints;
 
@@ -154,7 +156,12 @@ public class Main_Window {
 		JButton buttonResize = new JButton("Resize");
 		buttonResize.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				handleResizeCommand();
+				try {
+					handleResizeCommand();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 			}
 		});
 		top_panel.add(buttonResize);
@@ -412,7 +419,7 @@ public class Main_Window {
 		return sb.toString();
 	}
 	
-	public void handleResizeCommand() {
+	public void handleResizeCommand() throws IOException {
 		/*
 		 * Just resize the image without converting to different format.
 		 * 
@@ -439,7 +446,8 @@ public class Main_Window {
 				String outputImagePath = makeOutputFilename(file, file_ext, resolution);
 				
 				
-				boolean result = resizeImageWithHint(file, outputImagePath, file_ext, width, height);
+				//boolean result = resizeImageWithHint(file, outputImagePath, file_ext, width, height);
+				boolean result = resizeImageUsingScaledInstance(file, outputImagePath, file_ext, width, height);
 				if(result) {
 					resized_model.addElement(getFileNameWithoutExtension(file.getName())+ "_" + resolution + "." + file_ext + " (success)");
 				}else {
@@ -510,4 +518,31 @@ public class Main_Window {
         return result;	
 		
 	}
+	
+	public boolean resizeImageUsingScaledInstance(File originalFile, String outputImagePath, String formatName, int targetWidth, int targetHeight) throws IOException {
+		
+		boolean result = false;
+		
+		try {
+			// reads input image from file
+			FileInputStream inputStream = new FileInputStream(originalFile);
+	        BufferedImage originalImage = ImageIO.read(inputStream);
+			
+		    Image resultingImage = originalImage.getScaledInstance(targetWidth, targetHeight, Image.SCALE_SMOOTH);
+		    BufferedImage outputImage = new BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB);
+		    outputImage.getGraphics().drawImage(resultingImage, 0, 0, null);
+		    
+		    //Write the BufferedImage object into an output file.
+			FileOutputStream outputStream = new FileOutputStream(outputImagePath);
+	        result = ImageIO.write(outputImage, formatName, outputStream);
+	        
+	        // needs to close the streams
+	        outputStream.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        return result;
+	}
+	
 }
