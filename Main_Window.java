@@ -1,5 +1,4 @@
 
-
 import java.awt.Color;
 import java.awt.EventQueue;
 import javax.swing.JFrame;
@@ -34,6 +33,8 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.AlphaComposite;
 import java.awt.RenderingHints;
+import org.imgscalr.Scalr;
+
 
 public class Main_Window {
 
@@ -378,6 +379,19 @@ public class Main_Window {
 		return file_name.substring(0,dot);
 	}
 	
+	public String getFileExtension(String file_name) {
+		
+		//Make output file directory. 
+		int dot = 0;
+		//Find the index of the dot from the right end of file name.
+		for(int i = file_name.length()-1; i > 0; i--) {
+			if(file_name.charAt(i) == '.') {
+				dot = i;
+			}
+		}
+		//Return substring of the file name.
+		return file_name.substring(dot+1);
+	}
 	
 	public void handleSetDirectoryCommand() {
 		//create an object of JFileChooser class
@@ -442,12 +456,15 @@ public class Main_Window {
 			
 		    for(File file : selected_files) {
 				
-				String file_ext = (String) file_extension_list.getSelectedItem();
+				String file_ext = (String) getFileExtension(file.getName());
 				String outputImagePath = makeOutputFilename(file, file_ext, resolution);
 				
 				
 				//boolean result = resizeImageWithHint(file, outputImagePath, file_ext, width, height);
-				boolean result = resizeImageUsingScaledInstance(file, outputImagePath, file_ext, width, height);
+				//boolean result = resizeImageUsingScaledInstance(file, outputImagePath, file_ext, width, height);
+				//boolean result = resizeToWidthImgscalr(file, outputImagePath, file_ext, width, height);
+				boolean result = resizeImgscalr(file, outputImagePath, file_ext, width, height);
+				
 				if(result) {
 					resized_model.addElement(getFileNameWithoutExtension(file.getName())+ "_" + resolution + "." + file_ext + " (success)");
 				}else {
@@ -543,6 +560,50 @@ public class Main_Window {
 			e.printStackTrace();
 		}
         return result;
+	}
+	
+	//Resize to width
+	public boolean resizeToWidthImgscalr(File originalFile, String outputImagePath, String formatName, int targetWidth, int targetHeight) {
+		boolean result = false;
+		
+		try {
+			// reads input image from file
+			FileInputStream inputStream = new FileInputStream(originalFile);
+	        BufferedImage originalImage = ImageIO.read(inputStream);
+	        BufferedImage outputImage = Scalr.resize(originalImage, targetWidth);
+	        //Write the BufferedImage object into an output file.
+			FileOutputStream outputStream = new FileOutputStream(outputImagePath);
+	        result = ImageIO.write(outputImage, formatName, outputStream);
+	        // needs to close the streams
+	        outputStream.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return result;
+	}
+	
+	//Resize to width and height. 
+	public boolean resizeImgscalr(File originalFile, String outputImagePath, String formatName, int targetWidth, int targetHeight) {
+		boolean result = false;
+		
+		try {
+			// reads input image from file
+			FileInputStream inputStream = new FileInputStream(originalFile);
+	        BufferedImage originalImage = ImageIO.read(inputStream);
+	        BufferedImage outputImage = Scalr.resize(originalImage, Scalr.Method.AUTOMATIC, Scalr.Mode.AUTOMATIC, targetWidth, targetHeight, Scalr.OP_ANTIALIAS);
+	        //Write the BufferedImage object into an output file.
+			FileOutputStream outputStream = new FileOutputStream(outputImagePath);
+	        result = ImageIO.write(outputImage, formatName, outputStream);
+	        // needs to close the streams
+	        outputStream.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return result;
 	}
 	
 }
